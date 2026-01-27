@@ -8,6 +8,7 @@ import Swal from "sweetalert2"
 import { LineItem, CurrencyOption,InvoiceSchema,CURRENCIES } from "./../types/invoice"
 import { useInvoiceCalculations } from "../hooks/useInvoiceCalculation"
 import { useInvoiceItems } from "../hooks/useInvoiceItems"
+import axios from "axios"
 
 const getSavedFormValues = () => {
   return {
@@ -35,6 +36,7 @@ export default function Invoice() {
   setEditItem,
   startEdit,
   saveEdit,
+  clearItems
 } = useInvoiceItems()
 
   const [currentItem, setCurrentItem] = useState<LineItem>({
@@ -91,42 +93,56 @@ const formik = useFormik({
   }
 
   // handle invoice generation
-  const handleSendInvoice = async (values: typeof formik.values) => {
-    localStorage.setItem("invoiceNumber", values.invoiceNumber)
-    localStorage.setItem("invoiceDate", values.invoiceDate)
-    localStorage.setItem("dueDate", values.dueDate)
-    localStorage.setItem("customerName", values.customerName)
-    localStorage.setItem("customerEmail", values.customerEmail)
-    localStorage.setItem("customerPhone", values.customerPhone)
-    localStorage.setItem("billingAddress", values.billingAddress)
-    localStorage.setItem("vatRate", values.vatRate.toString())
-    localStorage.setItem("whtRate", values.whtRate.toString())
-    localStorage.setItem("currency", currency.code)
+ 
 
-    setIsGenerating(true)
+const handleSendInvoice = async (values: typeof formik.values) => {
+  // persist draft
+  localStorage.setItem("invoiceNumber", values.invoiceNumber)
+  localStorage.setItem("invoiceDate", values.invoiceDate)
+  localStorage.setItem("dueDate", values.dueDate)
+  localStorage.setItem("customerName", values.customerName)
+  localStorage.setItem("customerEmail", values.customerEmail)
+  localStorage.setItem("customerPhone", values.customerPhone)
+  localStorage.setItem("billingAddress", values.billingAddress)
+  localStorage.setItem("vatRate", values.vatRate.toString())
+  localStorage.setItem("whtRate", values.whtRate.toString())
+  localStorage.setItem("currency", currency.code)
 
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
+  setIsGenerating(true)
 
-     
+  try {
+    const { data } = await axios.post(
+      "https://jsonplaceholder.typicode.com/posts",
+      {
+        ...values,
+        currency: currency.code,
+        items, // from useInvoiceItems
+      }
+    )
 
-      setIsGenerating(false)
+    console.log("Invoice sent:", data)
 
-      Swal.fire({
-        icon: "success",
-        title: "Invoice Generated!",
-        text: "Your invoice has been generated and sent successfully.",
-        confirmButtonColor: "#3085d6",
-      })
-    } catch (error) {
-      setIsGenerating(false)
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to generate invoice. Please try again.",
-      })
-    }
+    setIsGenerating(false)
+
+    Swal.fire({
+      icon: "success",
+      title: "Invoice Generated!",
+      text: "Your invoice has been generated and sent successfully.",
+      confirmButtonColor: "#3085d6",
+    })
+    clearItems()
+  } catch (error) {
+    console.error(error)
+    setIsGenerating(false)
+
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to generate invoice. Please try again.",
+    })
   }
+}
+
 
   // invoice calculations
   const { subtotal, vat, wht, grandTotal } = useInvoiceCalculations(

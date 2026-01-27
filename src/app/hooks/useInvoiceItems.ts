@@ -37,6 +37,10 @@ export const useInvoiceItems = () => {
     setEditingIndex(null)
     setEditItem(null)
   }
+  const clearItems = () => {
+  persist([])
+}
+
 
   return {
     items,
@@ -47,5 +51,6 @@ export const useInvoiceItems = () => {
     setEditItem,
     startEdit,
     saveEdit,
+    clearItems
   }
 }
