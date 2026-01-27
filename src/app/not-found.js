@@ -1,8 +1,7 @@
 'use client'; 
-import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Home, ArrowRight } from 'lucide-react';
+import { Home} from 'lucide-react';
 
 export default function NotFoundPage() {
   return (

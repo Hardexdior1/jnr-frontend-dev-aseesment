@@ -1,12 +1,10 @@
 
 "use client";
 import Invoice from "./components/Invoice";
-import { useRouter } from "next/navigation";
 
 export default function Home() {
   
-  console.log('hello world')
-     const router=useRouter()
+
 
 
 

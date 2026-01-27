@@ -131,3 +131,31 @@ html{
   }
 }
 
+
+
+/* Show elements only when printing */
+@media print {    
+  .print-only {
+    display: block !important;
+  }
+}
+
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+}
+
+@media print {
+  table {
+    page-break-inside: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+}
+
