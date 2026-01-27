@@ -1,80 +1,59 @@
 
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef,useEffect } from "react"
 import { Trash2, Edit2, Check } from "lucide-react"
 import { useFormik } from "formik"
-import * as Yup from "yup"
 import Swal from "sweetalert2"
-import type { LineItem, CurrencyOption } from "./../types/invoice"
+import { LineItem, CurrencyOption,InvoiceSchema,CURRENCIES } from "./../types/invoice"
+import { useInvoiceCalculations } from "../hooks/useInvoiceCalculation"
+import { useInvoiceItems } from "../hooks/useInvoiceItems"
+
+const getSavedFormValues = () => {
+  return {
+    invoiceNumber: localStorage.getItem("invoiceNumber") || "INV-001",
+    invoiceDate: localStorage.getItem("invoiceDate") || "",
+    dueDate: localStorage.getItem("dueDate") || "",
+    customerName: localStorage.getItem("customerName") || "",
+    customerEmail: localStorage.getItem("customerEmail") || "",
+    customerPhone: localStorage.getItem("customerPhone") || "",
+    billingAddress: localStorage.getItem("billingAddress") || "",
+    vatRate: Number(localStorage.getItem("vatRate")) || 7.5,
+    whtRate: Number(localStorage.getItem("whtRate")) || 5,
+  }
+}
 
 
-const CURRENCIES: CurrencyOption[] = [
-  { code: "NGN", symbol: "₦", name: "Nigerian Naira" },
-  { code: "USD", symbol: "$", name: "US Dollar" },
-  { code: "EUR", symbol: "€", name: "Euro" },
-  { code: "GBP", symbol: "£", name: "British Pound" },
-  { code: "JPY", symbol: "¥", name: "Japanese Yen" },
-]
-
-// Validation Schema
-const validationSchema = Yup.object().shape({
-  invoiceNumber: Yup.string()
-    .required("Invoice number is required")
-    .min(2, "Invoice number must be at least 2 characters"),
-  invoiceDate: Yup.string()
-    .required("Invoice date is required"),
-  dueDate: Yup.string()
-    .required("Due date is required"),
-  customerName: Yup.string()
-    .required("Customer name is required")
-    .min(2, "Customer name must be at least 2 characters"),
-  customerEmail: Yup.string()
-    .required("Customer email is required")
-    .email("Invalid email address"),
-  customerPhone: Yup.string()
-    .optional(),
-  billingAddress: Yup.string()
-    .required("Billing address is required")
-    .min(5, "Billing address must be at least 5 characters"),
-  vatRate: Yup.number()
-    .required("VAT rate is required")
-    .min(0, "VAT rate cannot be negative")
-    .max(100, "VAT rate cannot exceed 100"),
-  whtRate: Yup.number()
-    .required("WHT rate is required")
-    .min(0, "WHT rate cannot be negative")
-    .max(100, "WHT rate cannot exceed 100"),
-})
 
 export default function Invoice() {
-  const [items, setItems] = useState<LineItem[]>([])
+  const {
+  items,
+  addItem,
+  deleteItem,
+  editingIndex,
+  editItem,
+  setEditItem,
+  startEdit,
+  saveEdit,
+} = useInvoiceItems()
+
   const [currentItem, setCurrentItem] = useState<LineItem>({
     description: "",
     quantity: 1,
     unitPrice: 0,
   })
   const [currency, setCurrency] = useState<CurrencyOption>(CURRENCIES[0])
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [editItem, setEditItem] = useState<LineItem | null>(null)
+  
   const [isGenerating, setIsGenerating] = useState(false)
 
   const invoiceRef = useRef<HTMLDivElement>(null)
 
   // Formik initialization
 const formik = useFormik({
-  initialValues: {
-    invoiceNumber: "INV-001",
-    invoiceDate: "",
-    dueDate: "",
-    customerName: "",
-    customerEmail: "",
-    customerPhone: "",
-    billingAddress: "",
-    vatRate: 7.5,
-    whtRate: 5,
-  },
-  validationSchema: validationSchema,
+  initialValues:getSavedFormValues(),
+    enableReinitialize: true, 
+
+  validationSchema: InvoiceSchema,
   validateOnChange: true,  
   validateOnBlur: true,    
   validateOnMount: true,   
@@ -83,107 +62,19 @@ const formik = useFormik({
   },
 })
 
-  // getting prev values from localStorage  if there is any
-  useEffect(() => {
-    const savedItems = localStorage.getItem("invoiceItems")
-    const savedInvoiceNumber = localStorage.getItem("invoiceNumber")
-    const savedInvoiceDate = localStorage.getItem("invoiceDate")
-    const savedDueDate = localStorage.getItem("dueDate")
-    const savedCustomerName = localStorage.getItem("customerName")
-    const savedCustomerEmail = localStorage.getItem("customerEmail")
-    const savedCustomerPhone = localStorage.getItem("customerPhone")
-    const savedBillingAddress = localStorage.getItem("billingAddress")
-    const savedVatRate = localStorage.getItem("vatRate")
-    const savedWhtRate = localStorage.getItem("whtRate")
-    const savedCurrency = localStorage.getItem("currency")
+  const handleAddItem = () => {
+  if (!currentItem.description.trim()) return
 
-    if (savedItems) setItems(JSON.parse(savedItems))
-    if (savedInvoiceNumber) formik.setFieldValue("invoiceNumber", savedInvoiceNumber)
-    if (savedInvoiceDate) formik.setFieldValue("invoiceDate", savedInvoiceDate)
-    if (savedDueDate) formik.setFieldValue("dueDate", savedDueDate)
-    if (savedCustomerName) formik.setFieldValue("customerName", savedCustomerName)
-    if (savedCustomerEmail) formik.setFieldValue("customerEmail", savedCustomerEmail)
-    if (savedCustomerPhone) formik.setFieldValue("customerPhone", savedCustomerPhone)
-    if (savedBillingAddress) formik.setFieldValue("billingAddress", savedBillingAddress)
-    if (savedVatRate) formik.setFieldValue("vatRate", parseFloat(savedVatRate))
-    if (savedWhtRate) formik.setFieldValue("whtRate", parseFloat(savedWhtRate))
-    if (savedCurrency) {
-      const curr = CURRENCIES.find(c => c.code === savedCurrency)
-      if (curr) setCurrency(curr)
-    }
-  }, [])
+  addItem(currentItem)
 
-  const saveToLocalStorage = (newItems: LineItem[]) => {
-    localStorage.setItem("invoiceItems", JSON.stringify(newItems))
-  }
+  setCurrentItem({
+    description: "",
+    quantity: 1,
+    unitPrice: 0,
+  })
+}
 
-  const addItem = () => {
-    if (!currentItem.description.trim()) return
-
-
-    const newItems = [...items, currentItem]
-    setItems(newItems)
-    saveToLocalStorage(newItems)
-    setCurrentItem({ description: "", quantity: 1, unitPrice: 0 })
-
-    Swal.fire({
-      icon: "success",
-      title: "Item Added",
-      text: "Item has been added to the invoice",
-      timer: 1500,
-      showConfirmButton: false,
-    })
-  }
-
-  const deleteItem = (index: number) => {
-    Swal.fire({
-      title: "Delete Item?",
-      text: "Are you sure you want to delete this item?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const newItems = items.filter((_, i) => i !== index)
-        setItems(newItems)
-        saveToLocalStorage(newItems)
-
-        Swal.fire({
-          icon: "success",
-          title: "Deleted",
-          text: "Item has been deleted",
-          timer: 1500,
-          showConfirmButton: false,
-        })
-      }
-    })
-  }
-
-  const startEdit = (index: number) => {
-    setEditingIndex(index)
-    setEditItem({ ...items[index] })
-  }
-
-  const saveEdit = (index: number) => {
-    if (editItem) {
-      const newItems = [...items]
-      newItems[index] = editItem
-      setItems(newItems)
-      saveToLocalStorage(newItems)
-      setEditingIndex(null)
-      setEditItem(null)
-
-      Swal.fire({
-        icon: "success",
-        title: "Updated",
-        text: "Item has been updated",
-        timer: 1500,
-        showConfirmButton: false,
-      })
-    }
-  }
+// date formatting
 
   const formatDate = (dateString: string) => {
     if (!dateString) return ""
@@ -194,12 +85,13 @@ const formik = useFormik({
     return `${monthName} ${dayDate}, ${year}`
   }
 
+  // price formatting
   const formatPrice = (value: number) => {
     return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
 
+  // handle invoice generation
   const handleSendInvoice = async (values: typeof formik.values) => {
-    // i am saving form values to localStorage
     localStorage.setItem("invoiceNumber", values.invoiceNumber)
     localStorage.setItem("invoiceDate", values.invoiceDate)
     localStorage.setItem("dueDate", values.dueDate)
@@ -236,22 +128,39 @@ const formik = useFormik({
     }
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-  const vat = subtotal * (formik.values.vatRate / 100)
-  const wht = subtotal * (formik.values.whtRate / 100)
-  const grandTotal = subtotal + vat - wht
+  // invoice calculations
+  const { subtotal, vat, wht, grandTotal } = useInvoiceCalculations(
+  items,
+  formik.values.vatRate,
+  formik.values.whtRate
+)
 
+
+// company info
   const company = {
     name: "Nexora",
     email: "hello@nexora.com",
     address1: "22 Marina Road",
     address2: "Lagos Island, Lagos",
   }
-  const logoLetter = company.name.charAt(0).toUpperCase()
+    const logoLetter = company.name.charAt(0).toUpperCase()
 
+
+    // save form values to localStorage on change
+  useEffect(() => {
+  const values = formik.values
+
+  Object.entries(values).forEach(([key, value]) => {
+    localStorage.setItem(key, String(value))
+  })
+}, [formik.values])
+
+
+// global style for some text in this file
     const sharedStyleForKeys = "text-bold text-base"
   const sharedStyleForValues = "text-semibold text-sm text-gray-500"
 
+  // validation for generate button
   const isGenerateDisabled =
   isGenerating ||
   !formik.values.customerName ||
@@ -262,6 +171,8 @@ const formik = useFormik({
   items.length === 0
 
   const [isExporting, setIsExporting] = useState(false)
+
+  // print
 const handlePrint = () => {
   setIsExporting(true)
 
@@ -536,7 +447,8 @@ const handlePrint = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={addItem}
+                      onClick={handleAddItem}
+                      
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition duration-200"
                     >
                       + Add Item
