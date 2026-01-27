@@ -9,19 +9,33 @@ import { LineItem, CurrencyOption,InvoiceSchema,CURRENCIES } from "./../types/in
 import { useInvoiceCalculations } from "../hooks/useInvoiceCalculation"
 import { useInvoiceItems } from "../hooks/useInvoiceItems"
 import axios from "axios"
+import { getIn } from "formik"
 
-const getSavedFormValues = () => {
-  return {
-    invoiceNumber: localStorage.getItem("invoiceNumber") || "INV-001",
-    invoiceDate: localStorage.getItem("invoiceDate") || "",
-    dueDate: localStorage.getItem("dueDate") || "",
-    customerName: localStorage.getItem("customerName") || "",
-    customerEmail: localStorage.getItem("customerEmail") || "",
-    customerPhone: localStorage.getItem("customerPhone") || "",
-    billingAddress: localStorage.getItem("billingAddress") || "",
-    vatRate: Number(localStorage.getItem("vatRate")) || 7.5,
-    whtRate: Number(localStorage.getItem("whtRate")) || 5,
-  }
+
+// const getSavedFormValues = () => {
+//   return {
+//     invoiceNumber: localStorage.getItem("invoiceNumber") || "INV-001",
+//     invoiceDate: localStorage.getItem("invoiceDate") || "",
+//     dueDate: localStorage.getItem("dueDate") || "",
+//     customerName: localStorage.getItem("customerName") || "",
+//     customerEmail: localStorage.getItem("customerEmail") || "",
+//     customerPhone: localStorage.getItem("customerPhone") || "",
+//     billingAddress: localStorage.getItem("billingAddress") || "",
+//     vatRate: Number(localStorage.getItem("vatRate")) || 7.5,
+//     whtRate: Number(localStorage.getItem("whtRate")) || 5,
+//   }
+// }
+
+const defaultValues = {
+  invoiceNumber: "INV-001",
+  invoiceDate: "",
+  dueDate: "",
+  customerName: "",
+  customerEmail: "",
+  customerPhone: "",
+  billingAddress: "",
+  vatRate: 7.5,
+  whtRate: 5,
 }
 
 
@@ -52,8 +66,7 @@ export default function Invoice() {
 
   // Formik initialization
 const formik = useFormik({
-  initialValues:getSavedFormValues(),
-    enableReinitialize: true, 
+  initialValues:defaultValues,
 
   validationSchema: InvoiceSchema,
   validateOnChange: true,  
@@ -116,7 +129,7 @@ const handleSendInvoice = async (values: typeof formik.values) => {
       {
         ...values,
         currency: currency.code,
-        items, // from useInvoiceItems
+        items, 
       }
     )
 
@@ -162,8 +175,28 @@ const handleSendInvoice = async (values: typeof formik.values) => {
     const logoLetter = company.name.charAt(0).toUpperCase()
 
 
+    useEffect(() => {
+  if (typeof window === "undefined") return
+
+  const savedValues = {
+    invoiceNumber: localStorage.getItem("invoiceNumber") || "INV-001",
+    invoiceDate: localStorage.getItem("invoiceDate") || "",
+    dueDate: localStorage.getItem("dueDate") || "",
+    customerName: localStorage.getItem("customerName") || "",
+    customerEmail: localStorage.getItem("customerEmail") || "",
+    customerPhone: localStorage.getItem("customerPhone") || "",
+    billingAddress: localStorage.getItem("billingAddress") || "",
+    vatRate: Number(localStorage.getItem("vatRate")) || 7.5,
+    whtRate: Number(localStorage.getItem("whtRate")) || 5,
+  }
+
+  formik.setValues(savedValues)
+}, [])
+
     // save form values to localStorage on change
   useEffect(() => {
+      if (typeof window === "undefined") return
+
   const values = formik.values
 
   Object.entries(values).forEach(([key, value]) => {
@@ -198,11 +231,20 @@ const handlePrint = () => {
   }, 300)
 }
 
+
+
   const renderError = (fieldName: string) => {
-    return (formik.touched as any)[fieldName] && (formik.errors as any)[fieldName] ? (
-      <p className="text-red-500 text-xs mt-1">{(formik.errors as any)[fieldName]}</p>
-    ) : null
-  }
+  const error = getIn(formik.errors, fieldName)
+  const touched = getIn(formik.touched, fieldName)
+
+  if (!touched || !error) return null
+
+  return (
+    <p className="text-red-500 text-xs mt-1">
+      {error}
+    </p>
+  )
+}
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
