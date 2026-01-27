@@ -1,6 +1,7 @@
 
 "use client";
 import Invoice from "./components/Invoice";
+import { Toaster } from 'react-hot-toast'
 
 export default function Home() {
   
@@ -14,6 +15,8 @@ export default function Home() {
 
 <section className="p-2 my-auto font-semibold bg-gradient-to-br from-gray-100 via-white to-blue-200 lg:p-5">
 <Invoice />
+      <Toaster position="top-right" reverseOrder={false} />
+
 
 </section>
 

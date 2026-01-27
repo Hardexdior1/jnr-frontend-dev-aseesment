@@ -10,21 +10,10 @@ import { useInvoiceCalculations } from "../hooks/useInvoiceCalculation"
 import { useInvoiceItems } from "../hooks/useInvoiceItems"
 import axios from "axios"
 import { getIn } from "formik"
+import toast from 'react-hot-toast' 
 
 
-// const getSavedFormValues = () => {
-//   return {
-//     invoiceNumber: localStorage.getItem("invoiceNumber") || "INV-001",
-//     invoiceDate: localStorage.getItem("invoiceDate") || "",
-//     dueDate: localStorage.getItem("dueDate") || "",
-//     customerName: localStorage.getItem("customerName") || "",
-//     customerEmail: localStorage.getItem("customerEmail") || "",
-//     customerPhone: localStorage.getItem("customerPhone") || "",
-//     billingAddress: localStorage.getItem("billingAddress") || "",
-//     vatRate: Number(localStorage.getItem("vatRate")) || 7.5,
-//     whtRate: Number(localStorage.getItem("whtRate")) || 5,
-//   }
-// }
+
 
 const defaultValues = {
   invoiceNumber: "INV-001",
@@ -77,17 +66,38 @@ const formik = useFormik({
   },
 })
 
-  const handleAddItem = () => {
-  if (!currentItem.description.trim()) return
 
+const handleAddItem = () => {
+  const { description, quantity, unitPrice } = currentItem
+
+  if (!description.trim()) {
+    toast.error("Please enter a description")
+    return
+  }
+
+  if (quantity <= 0) {
+    toast.error("Quantity must be greater than 0")
+    return
+  }
+
+  if (unitPrice <= 0) {
+    toast.error("Price must be greater than 0")
+    return
+  }
+
+  // All good, add item
   addItem(currentItem)
 
+  // reset input fields
   setCurrentItem({
     description: "",
     quantity: 1,
     unitPrice: 0,
   })
+
+  toast.success("Item added successfully!")
 }
+
 
 // date formatting
 
@@ -247,7 +257,7 @@ const handlePrint = () => {
 }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+    <div className=" bg-gray-50 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
@@ -528,7 +538,7 @@ const handlePrint = () => {
           </div>
 
           {/* RIGHT SIDE - INVOICE PREVIEW */}
-        <section className="print-area shadow tracking-wider bg-white lg:col-span-3 max-h-[calc(100vh-80px)] rounded-xl md:overflow-auto" ref={invoiceRef}>
+        <section className="print-area shadow tracking-wider bg-white lg:col-span-3  rounded-xl md:overflow-auto md:max-h-[calc(100vh-80px)]" ref={invoiceRef}>
 <div className="w-full flex-wrap gap-5 rounded-tr-md rounded-tl-md bg-gradient-to-r from-slate-900 to-slate-800 p-6 flex items-center justify-between text-white lg:gap-3">
 
 <div className="flex items-center gap-4">
